@@ -93,6 +93,7 @@ impl IDT {
             security_exception: Gate::empty(),
             reserved_3: Gate::empty(),
             gp_interrupts: [Gate::empty(); 256 - 32],
+            disk_interrupts: Gate::empty(),
         }
     }
 
@@ -126,6 +127,7 @@ lazy_static! {
         global_idt.page_fault.set_handler_fn(page_fault);
         global_idt.overflow.set_handler_fn(overflow);
         global_idt.bound_range_exceeded.set_handler_fn(bound_range);
+        global_idt.disk_interrupts.set_handler_fn(disk_access);
         global_idt
     };
 }

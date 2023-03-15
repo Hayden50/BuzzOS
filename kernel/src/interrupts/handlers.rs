@@ -14,6 +14,11 @@ pub extern "x86-interrupt" fn page_fault(frame: InterruptStackFrame, _error_code
     println!("EXCEPTION: PAGE FAULT\n{:#?}", frame);
 }
 
+pub extern "x86-interrupt" fn disk_access(frame: InterruptStackFrame, _error_code: PageFaultErr) {
+    println!("EXCEPTION: PAGE FAULT\n{:#?}", frame);
+    // NEED TO CALL APIC LOCK 
+}
+
 pub extern "x86-interrupt" fn non_maskable(frame: InterruptStackFrame) {
     println!("EXCEPTION: NON MASKABLE INTERRUPT\n{:#?}", frame);
 }
