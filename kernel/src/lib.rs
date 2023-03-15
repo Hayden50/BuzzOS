@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(mixed_integer_ops)]
 #![feature(abi_x86_interrupt)]
 #![feature(const_mut_refs)]
 #![feature(alloc_error_handler)]
