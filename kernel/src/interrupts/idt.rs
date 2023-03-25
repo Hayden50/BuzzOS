@@ -60,7 +60,7 @@ impl Gate<PageFaultHandler> {
 
 impl IDT {
     // Initialization of our Interrupt Descriptor Table. Reserved gates must also be initialized.
-    // Notice gp_interrupts are also intiialized, being composed of 224 elements. Those are
+    // Notice gp_interrupts are also initialized, being composed of 224 elements. Those are
     // interrupts available for the OS (e.g. System Calls).
     #[inline]
     pub fn new() -> IDT {
