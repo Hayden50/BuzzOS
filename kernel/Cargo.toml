@@ -7,6 +7,7 @@ edition = "2018"
 volatile = "0.2.6" # Volatile allows finer grain control of the compiler
 spin = "0.5.2"
 bitflags = "1.0.4"
+pic8259_x86 = "0.1.0"
 
 [dependencies.lazy_static]
 version = "1.0"
