@@ -14,8 +14,8 @@ pub extern "x86-interrupt" fn page_fault(frame: InterruptStackFrame, _error_code
     println!("EXCEPTION: PAGE FAULT\n{:#?}", frame);
 }
 
-pub extern "x86-interrupt" fn disk_access(frame: InterruptStackFrame, _error_code: PageFaultErr) {
-    println!("EXCEPTION: PAGE FAULT\n{:#?}", frame);
+pub extern "x86-interrupt" fn disk_access(frame: InterruptStackFrame) {
+    println!("EXCEPTION: DISK ACCESS\n{:#?}", frame);
     // NEED TO CALL APIC LOCK 
 }
 
