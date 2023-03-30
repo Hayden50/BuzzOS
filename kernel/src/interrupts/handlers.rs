@@ -1,3 +1,4 @@
+use crate::print;
 use crate::println;
 use crate::interrupts::apic;
 
@@ -16,9 +17,11 @@ pub extern "x86-interrupt" fn page_fault(frame: InterruptStackFrame, _error_code
 }
 
 pub extern "x86-interrupt" fn disk_access(frame: InterruptStackFrame) {
-    println!("EXCEPTION: DISK INTERRUPT\n{:#?}", frame);
+    // println!("EXCEPTION: DISK INTERRUPT\n{:#?}", frame);
+    let temp = apic::InterruptIndex::HardDisk.as_u8(); 
+    println!("{}", temp);
     unsafe {
-        apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::HardDisk.as_u8());
+        apic::PICS.lock().notify_end_of_interrupt(temp);
     }
 }
 

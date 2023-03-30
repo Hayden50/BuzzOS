@@ -4,7 +4,6 @@ use crate::println;
 // Assembly wrapping using STI to enable interrupts
 #[inline]
 pub fn enable() {
-    println!("Interrupts Enabled");
     unsafe {
         asm!("sti", options(nomem, nostack));
     }

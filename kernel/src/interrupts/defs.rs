@@ -59,19 +59,18 @@ pub struct IDT {
     pub virtualization: Gate<InterruptHandler>,
     pub cp_protection_exception: Gate<InterruptHandlerWithErr>,
 
-    pub reserved_2: [Gate<InterruptHandler>; 6],
+    pub reserved_2: [Gate<InterruptHandler>; 7],
 
     pub hv_injection_exception: Gate<InterruptHandler>,
     pub vmm_communication_exception: Gate<InterruptHandlerWithErr>,
 
     pub security_exception: Gate<InterruptHandlerWithErr>,
-    pub reserved_3: Gate<InterruptHandler>,
 
     pub disk_interrupts: Gate<InterruptHandler>,
     pub timer: Gate<InterruptHandler>,
     
     /// Those can be defined by the OS (Notice 0 to 31 are already used by the processor)
-    pub gp_interrupts: [Gate<InterruptHandler>; 256 - 32],
+    pub gp_interrupts: [Gate<InterruptHandler>; 256 - 34],
 }
 
 /// Gate Flags. Those allow fine grain control of how and when should traps/interrupts be issued.
