@@ -16,14 +16,21 @@ pub extern "x86-interrupt" fn page_fault(frame: InterruptStackFrame, _error_code
     println!("EXCEPTION: PAGE FAULT\n{:#?}", frame);
 }
 
-pub extern "x86-interrupt" fn disk_access_handler(frame: InterruptStackFrame) {
+pub extern "x86-interrupt" fn primary_disk_access(frame: InterruptStackFrame) {
     println!("EXCEPTION: DISK INTERRUPT\n{:#?}", frame);
     unsafe {
         apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::PrimaryATAHardDisk.as_u8());
     }
 }
 
-pub extern "x86-interrupt" fn timer_interrupt_handler(frame: InterruptStackFrame) {
+pub extern "x86-interrupt" fn secondary_disk_access(frame: InterruptStackFrame) {
+    println!("EXCEPTION: DISK INTERRUPT\n{:#?}", frame);
+    unsafe {
+        apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::SecondaryATAHardDisk.as_u8());
+    }
+}
+
+pub extern "x86-interrupt" fn timer_interrupt(frame: InterruptStackFrame) {
     unsafe {
         apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::Timer.as_u8());
     }
