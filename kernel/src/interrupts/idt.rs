@@ -65,35 +65,50 @@ impl IDT {
     #[inline]
     pub fn new() -> IDT {
         IDT {
-            div_by_zero: Gate::empty(),                     // 0
-            debug: Gate::empty(),                           // 1
-            non_maskable_interrupt: Gate::empty(),          // 2
-            breakpoint: Gate::empty(),                      // 3
-            overflow: Gate::empty(),                        // 4
-            bound_range_exceeded: Gate::empty(),            // 5
-            invalid_opcode: Gate::empty(),                  // 6
-            device_not_available: Gate::empty(),            // 7
-            double_fault: Gate::empty(),                    // 8
-            coprocessor_segment_overrun: Gate::empty(),     // 9
-            invalid_tss: Gate::empty(),                     // 10
-            segment_not_present: Gate::empty(),             // 11
-            stack_segment_fault: Gate::empty(),             // 12
-            gen_protection_fault: Gate::empty(),            // 13
-            page_fault: Gate::empty(),                      // 14
-            reserved_1: Gate::empty(),                      // 15
-            x87_floating_point: Gate::empty(),              // 16
-            alignment_check: Gate::empty(),                 // 17
-            machine_check: Gate::empty(),                   // 18
-            simd_floating_point: Gate::empty(),             // 19 
-            virtualization: Gate::empty(),                  // 20
-            cp_protection_exception: Gate::empty(),         // 21
-            reserved_2: [Gate::empty(); 7],                 // 22 - 28
-            hv_injection_exception: Gate::empty(),          // 29
-            vmm_communication_exception: Gate::empty(),     // 30
-            security_exception: Gate::empty(),              // 31
-            timer: Gate::empty(),                           // 32
-            disk_interrupts: Gate::empty(),                 // 33
-            gp_interrupts: [Gate::empty(); 256 - 34],       // 34-255
+            div_by_zero: Gate::empty(),                         //0
+            debug: Gate::empty(),                               //1
+            non_maskable_interrupt: Gate::empty(),              //2
+            breakpoint: Gate::empty(),                          //3
+            overflow: Gate::empty(),                            //4
+            bound_range_exceeded: Gate::empty(),                //5
+            invalid_opcode: Gate::empty(),                      //6
+            device_not_available: Gate::empty(),                //7
+            double_fault: Gate::empty(),                        //8
+            coprocessor_segment_overrun: Gate::empty(),         //9
+            invalid_tss: Gate::empty(),                         //10
+            segment_not_present: Gate::empty(),                 //11
+            stack_segment_fault: Gate::empty(),                 //12
+            gen_protection_fault: Gate::empty(),                //13
+            page_fault: Gate::empty(),                          //14
+            reserved_1: Gate::empty(),                          //15
+            x87_floating_point: Gate::empty(),                  //16
+            alignment_check: Gate::empty(),                     //17
+            machine_check: Gate::empty(),                       //18
+            simd_floating_point: Gate::empty(),                 //19
+            virtualization: Gate::empty(),                      //20
+            cp_protection_exception: Gate::empty(),             //21
+            reserved_7: [Gate::empty(); 7],                     // 22-28
+            hv_injection_exception: Gate::empty(),              // 29
+            vmm_communication_exception: Gate::empty(),         // 30
+            security_exception: Gate::empty(),                  // 31
+            timer: Gate::empty(),                               // 32
+            keyboard: Gate::empty(),                            // 33
+            cascade: Gate::empty(),                             // 34
+            com2: Gate::empty(),                                // 35
+            com1: Gate::empty(),                                // 36
+            lpt2: Gate::empty(),                                // 37
+            floppy_disk_controller: Gate::empty(),              // 38
+            lpt1: Gate::empty(),                                // 39
+            real_time_clock: Gate::empty(),                     // 40
+            free1: Gate::empty(),                               // 41
+            free2: Gate::empty(),                               // 42
+            free3: Gate::empty(),                               // 43
+            ps2_mouse: Gate::empty(),                           // 44
+            fpu: Gate::empty(),                                 // 45
+            primary_ata_hard_disk: Gate::empty(),               // 46
+            secondary_ata_hard_disk: Gate::empty(),             // 47
+            uprint: Gate::empty(),                              // 48
+            gp_interrupts: [Gate::empty(); 207],                // 49-255
         }
     }
 
@@ -127,7 +142,7 @@ lazy_static! {
         global_idt.page_fault.set_handler_fn(page_fault);
         global_idt.overflow.set_handler_fn(overflow);
         global_idt.bound_range_exceeded.set_handler_fn(bound_range);
-        global_idt.disk_interrupts.set_handler_fn(disk_access);
+        global_idt.primary_ata_hard_disk.set_handler_fn(disk_access_handler);
         global_idt.timer.set_handler_fn(timer_interrupt_handler);
         global_idt
     };
