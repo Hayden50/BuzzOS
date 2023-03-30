@@ -67,10 +67,11 @@ pub struct IDT {
     pub security_exception: Gate<InterruptHandlerWithErr>,
     pub reserved_3: Gate<InterruptHandler>,
 
+    pub disk_interrupts: Gate<InterruptHandler>,
+    pub timer: Gate<InterruptHandler>,
+    
     /// Those can be defined by the OS (Notice 0 to 31 are already used by the processor)
     pub gp_interrupts: [Gate<InterruptHandler>; 256 - 32],
-
-    pub disk_interrupts: Gate<InterruptHandler>,
 }
 
 /// Gate Flags. Those allow fine grain control of how and when should traps/interrupts be issued.

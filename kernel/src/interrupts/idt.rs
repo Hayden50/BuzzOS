@@ -60,7 +60,7 @@ impl Gate<PageFaultHandler> {
 
 impl IDT {
     // Initialization of our Interrupt Descriptor Table. Reserved gates must also be initialized.
-    // Notice gp_interrupts are also initialized, being composed of 224 elements. Those are
+    // Notice gp_interrupts are also intiialized, being composed of 224 elements. Those are
     // interrupts available for the OS (e.g. System Calls).
     #[inline]
     pub fn new() -> IDT {
@@ -92,8 +92,9 @@ impl IDT {
             vmm_communication_exception: Gate::empty(),
             security_exception: Gate::empty(),
             reserved_3: Gate::empty(),
-            gp_interrupts: [Gate::empty(); 256 - 32],
+            timer: Gate::empty(),
             disk_interrupts: Gate::empty(),
+            gp_interrupts: [Gate::empty(); 256 - 32],
         }
     }
 
@@ -128,6 +129,7 @@ lazy_static! {
         global_idt.overflow.set_handler_fn(overflow);
         global_idt.bound_range_exceeded.set_handler_fn(bound_range);
         global_idt.disk_interrupts.set_handler_fn(disk_access);
+        global_idt.timer.set_handler_fn(timer_interrupt_handler);
         global_idt
     };
 }
