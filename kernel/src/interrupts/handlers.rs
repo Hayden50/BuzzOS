@@ -1,4 +1,3 @@
-use crate::print;
 use crate::println;
 use crate::interrupts::apic;
 
@@ -30,7 +29,7 @@ pub extern "x86-interrupt" fn secondary_disk_access(frame: InterruptStackFrame) 
     }
 }
 
-pub extern "x86-interrupt" fn timer_interrupt(frame: InterruptStackFrame) {
+pub extern "x86-interrupt" fn timer_interrupt(_frame: InterruptStackFrame) {
     unsafe {
         apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::Timer.as_u8());
     }
