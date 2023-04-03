@@ -1,5 +1,4 @@
 use core::arch::asm;
-use crate::println;
 
 // Assembly wrapping using STI to enable interrupts
 #[inline]
