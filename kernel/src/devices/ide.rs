@@ -92,34 +92,6 @@ impl Ide {
             outb(0x1f7, read_cmd);
         }
     }
-
-    // IDE interrupt handler. Atomically handles reads/writes to disk and updates queue
-    // pub fn ideintr(&mut self) {
-    //     let mut queue = self.idequeue.lock();
-    //     if let Some(mut b) = queue.take() {
-    //         // Read data if needed.
-    //         if b.flags & B_DIRTY == 0 && self.idewait(true).is_ok() {
-    //             for i in (0..B_SIZE).step_by(4) {
-    //                 unsafe {
-    //                     let data = inw(0x1f0);
-    //                     b.data[i..i + 4].copy_from_slice(&data.to_le_bytes());
-    //                 }
-    //             }
-    //         }
-    //
-    //         // Update buffer flags
-    //         b.flags |= B_VALID;
-    //         b.flags &= !B_DIRTY;
-    //
-    //         // Wake process waiting for this buf (if using a real scheduler).
-    //
-    //         // Start disk on next buf in queue
-    //         if let Some(mut next_buf) = b.qnext.take() {
-    //             self.idestart(&mut next_buf);
-    //             *queue = Some(next_buf);
-    //         }
-    //     }
-    // }
     
     pub fn ideintr(&mut self) {
         let idewait_result = self.idewait(true).is_ok();
