@@ -35,9 +35,12 @@ pub unsafe extern "C" fn _start() -> ! {
     // Setup Interrupts
     interrupts::idt::setup_idt();
 
-    // Setup PIC and enable interrupt
+    // Setup PIC and Enable Interrupts
     unsafe {interrupts::apic::PICS.lock().initialize()};
     interrupts::intrpt::enable();
+
+    // Initialize IDE Device
+    devices::ide::setup_ide();
 
     loop {}
 }
