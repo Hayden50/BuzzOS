@@ -48,7 +48,7 @@ pub unsafe extern "C" fn _start() -> ! {
     // Initialize IDE Device
     devices::ide::setup_ide();
 
-    // test_write();
+    test_write();
     test_read();
 
     println!("Goodbye");

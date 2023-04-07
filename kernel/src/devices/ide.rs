@@ -12,7 +12,6 @@ impl Ide {
     // Constructor for Ide Struct
     pub fn new() -> Ide {
         Ide {
-            idelock: Mutex::new(()),
             idequeue: Mutex::new(None),
             havedisk1: AtomicBool::new(false),
         }
@@ -36,7 +35,6 @@ impl Ide {
     
     // Initializes IDE device and checks that disk 1 is present
     pub fn ideinit(&mut self) {
-        let _guard = self.idelock.lock();
         self.idewait(false).unwrap();
 
         // Check if disk 1 is present
@@ -56,6 +54,7 @@ impl Ide {
     fn idestart(&mut self, b: &mut Buf) {
         println!("IDESTART: START");
         println!("IDESTART: BEGINNING OF METHOD: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
+        
         if b.blockno >= FS_SIZE {
             panic!("incorrect blockno");
         }
@@ -126,13 +125,10 @@ impl Ide {
             }
         }
 
-        println!("IDEINTR: PRECHANGE: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
-
-        // Update buffer flags
-        b.flags |= B_VALID;
-        b.flags &= !B_DIRTY;
+        b.flags |= B_VALID; // Set valid bit
+        b.flags &= !B_DIRTY; // Unset dirty bit
         
-        println!("IDEINTR: POSTCHANGE: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
+        println!("IDEINTR: UPDATED FLAGS: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
 
         // In a real scheduler, you would wake up the process waiting for this buf here.
         // wakeup(b);
@@ -145,12 +141,6 @@ impl Ide {
             next_buf_option = Some(next_buf);
         }
         
-        if queue.is_some() {
-            println!("IDEINTR: QUEUE IS SOME AFTER NEXT");
-        } else {
-            println!("IDEINTR: QUEUE IS EMPTY AFTER NEXT");
-        }
-
         drop(queue); // Explicitly drop the lock to release the borrow of self
         
         if let Some(mut next_buf) = next_buf_option {
@@ -158,7 +148,9 @@ impl Ide {
         }
 
         // Busy-wait for the operation to complete
-        while self.idewait(true).is_err() {}
+        while self.idewait(true).is_err() {
+            println!("IDEINTR: WAITING");
+        }
         println!("IDEINTR: END");
     }
     
@@ -192,8 +184,6 @@ impl Ide {
 
         drop(queue); // Explicitly drop the lock to release the borrow of self
         
-        let done_flag = Arc::new(AtomicBool::new(false));
-
         if start_disk {
             println!("IDERW: BEFORE IDESTART: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
             self.idestart(b);

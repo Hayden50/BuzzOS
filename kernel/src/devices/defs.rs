@@ -26,7 +26,6 @@ pub const B_SIZE: usize = 512; // Size of one block
 pub const FS_SIZE: usize = 1000; // Size of file system in blocks
 
 pub struct Ide {
-    pub idelock: Mutex<()>,
     pub idequeue: Mutex<Option<Box<Buf>>>,
     pub havedisk1: AtomicBool,
 }
