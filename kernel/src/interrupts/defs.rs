@@ -59,20 +59,30 @@ pub struct IDT {
     pub virtualization: Gate<InterruptHandler>,
     pub cp_protection_exception: Gate<InterruptHandlerWithErr>,
 
-    pub reserved_2: [Gate<InterruptHandler>; 6],
+    pub reserved_7: [Gate<InterruptHandler>; 7],
 
     pub hv_injection_exception: Gate<InterruptHandler>,
     pub vmm_communication_exception: Gate<InterruptHandlerWithErr>,
-
     pub security_exception: Gate<InterruptHandlerWithErr>,
-    pub reserved_3: Gate<InterruptHandler>,
-
-    /// Those can be defined by the OS (Notice 0 to 31 are already used by the processor)
-    pub gp_interrupts: [Gate<InterruptHandler>; 256 - 32],
-
-    pub disk_interrupts: Gate<InterruptHandler>,
+    pub timer: Gate<InterruptHandler>,
+    pub keyboard: Gate<InterruptHandler>,
+    pub cascade: Gate<InterruptHandler>,
+    pub com2: Gate<InterruptHandler>,
+    pub com1: Gate<InterruptHandler>,
+    pub lpt2: Gate<InterruptHandler>,
+    pub floppy_disk_controller: Gate<InterruptHandler>,
+    pub lpt1: Gate<InterruptHandler>,
+    pub real_time_clock: Gate<InterruptHandler>,
+    pub free1: Gate<InterruptHandler>,
+    pub free2: Gate<InterruptHandler>,
+    pub free3: Gate<InterruptHandler>,
+    pub ps2_mouse: Gate<InterruptHandler>,
+    pub fpu: Gate<InterruptHandler>,
+    pub primary_ata_hard_disk: Gate<InterruptHandler>,
+    pub secondary_ata_hard_disk: Gate<InterruptHandler>,
+    pub uprint: Gate<InterruptHandler>,
+    pub gp_interrupts: [Gate<InterruptHandler>; 207],
 }
-
 /// Gate Flags. Those allow fine grain control of how and when should traps/interrupts be issued.
 /// You can see more at https://wiki.osdev.org/Interrupt_Descriptor_Table#Gate_Descriptor_2
 pub enum GateFlags {

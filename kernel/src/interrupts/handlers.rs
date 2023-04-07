@@ -1,4 +1,5 @@
 use crate::println;
+use crate::interrupts::apic;
 
 use super::defs::{InterruptStackFrame, PageFaultErr};
 
@@ -14,9 +15,24 @@ pub extern "x86-interrupt" fn page_fault(frame: InterruptStackFrame, _error_code
     println!("EXCEPTION: PAGE FAULT\n{:#?}", frame);
 }
 
-pub extern "x86-interrupt" fn disk_access(frame: InterruptStackFrame) {
-    println!("EXCEPTION: DISK ACCESS\n{:#?}", frame);
-    // NEED TO CALL APIC LOCK 
+pub extern "x86-interrupt" fn primary_disk_access(frame: InterruptStackFrame) {
+    println!("EXCEPTION: DISK INTERRUPT\n{:#?}", frame);
+    unsafe {
+        apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::PrimaryATAHardDisk.as_u8());
+    }
+}
+
+pub extern "x86-interrupt" fn secondary_disk_access(frame: InterruptStackFrame) {
+    println!("EXCEPTION: DISK INTERRUPT\n{:#?}", frame);
+    unsafe {
+        apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::SecondaryATAHardDisk.as_u8());
+    }
+}
+
+pub extern "x86-interrupt" fn timer_interrupt(_frame: InterruptStackFrame) {
+    unsafe {
+        apic::PICS.lock().notify_end_of_interrupt(apic::InterruptIndex::Timer.as_u8());
+    }
 }
 
 pub extern "x86-interrupt" fn non_maskable(frame: InterruptStackFrame) {

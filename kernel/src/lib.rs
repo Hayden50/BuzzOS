@@ -12,6 +12,7 @@ pub mod misc;
 pub mod structures;
 pub mod threading;
 pub mod x86;
+pub mod fs;
 
 extern crate alloc;
 
@@ -34,6 +35,13 @@ pub unsafe extern "C" fn _start() -> ! {
 
     // Setup Interrupts
     interrupts::idt::setup_idt();
+
+    // Setup PIC and Enable Interrupts
+    unsafe {interrupts::apic::PICS.lock().initialize()};
+    interrupts::intrpt::enable();
+
+    // Initialize IDE Device
+    devices::ide::setup_ide();
 
     loop {}
 }
