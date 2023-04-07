@@ -51,9 +51,6 @@ impl Ide {
 
     // Starts processing requests and sends necessary data to the IDE device
     fn idestart(&mut self, b: &mut Buf) {
-        println!("IDESTART: START");
-        println!("IDESTART: BEGINNING OF METHOD: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
-        
         if b.blockno >= FS_SIZE {
             panic!("incorrect blockno");
         }
@@ -86,7 +83,6 @@ impl Ide {
         
         // Checks if dirty bit is set in the buffer and if it is, write 
         if b.flags & B_DIRTY != 0 {
-            println!("IDESTART: WRITING");
             outb(0x1f7, write_cmd);
             for i in (0..B_SIZE).step_by(4) {
                 let data = u32::from_le_bytes([b.data[i], b.data[i + 1], b.data[i + 2], b.data[i + 3]]);
@@ -95,20 +91,16 @@ impl Ide {
                 }
             }
         } else {
-            println!("IDESTART: READING");
             outb(0x1f7, read_cmd);
         }
 
         self.idewait(false).unwrap();
         self.ideintr(b);
-        
-        println!("IDESTART: END OF METHOD: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
     }
 
     // Interrupt handler. Currently using busy waiting but can be edited by deleting the final
     // while loop and uncommenting the wakeup call.
     pub fn ideintr(&mut self, b: &mut Buf) {
-        println!("IDEINTR: START");
         let idewait_result = self.idewait(true).is_ok();
 
         let mut queue = self.idequeue.lock();
@@ -127,8 +119,6 @@ impl Ide {
         b.flags |= B_VALID; // Set valid bit
         b.flags &= !B_DIRTY; // Unset dirty bit
         
-        println!("IDEINTR: UPDATED FLAGS: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
-
         // In a real scheduler, you would wake up the process waiting for this buf here.
         // wakeup(b);
 
@@ -137,29 +127,21 @@ impl Ide {
 
         // Start disk on next buf in queue
         if let Some(next_buf) = queue.take() {
-            println!("IDEINTR: TAKING QUEUE BEFORE DROP");
             next_buf_option = Some(next_buf);
         }
         
         drop(queue); // Explicitly drop the lock to release the borrow of self
         
         if let Some(mut next_buf) = next_buf_option {
-            println!("IDEINTR: IDESTART CALLED IN FN");
             self.idestart(&mut next_buf);
         }
 
         // Busy-wait for the operation to complete
-        while self.idewait(true).is_err() {
-            println!("IDEINTR: WAITING");
-        }
-         
-        println!("IDEINTR: END");
+        while self.idewait(true).is_err() {}
     }
     
     // Not working version that compiles
     pub fn iderw(&mut self, b: &mut Buf) {
-        
-        println!("IDERW CALLED");
         if (b.flags & (B_VALID | B_DIRTY)) == B_VALID {
             panic!("iderw: nothing to do");
         }
@@ -187,9 +169,7 @@ impl Ide {
         drop(queue); // Explicitly drop the lock to release the borrow of self
         
         if start_disk {
-            println!("IDERW: BEFORE IDESTART: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
             self.idestart(b);
-            println!("IDERW: IDESTART: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
         }
         
         // Wait for request to finish (if using a real scheduler).
@@ -197,7 +177,6 @@ impl Ide {
         // while !done_flag.load(Ordering::SeqCst) {}
          
         while b.flags & (B_VALID | B_DIRTY) != B_VALID {}
-        println!("IDERW: END");
     }
 }
 
