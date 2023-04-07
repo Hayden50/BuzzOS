@@ -1,6 +1,7 @@
 use alloc::boxed::Box;
 use core::sync::atomic::AtomicBool;
 use spin::Mutex;
+use crate::fs::defs::Buf;
 
 pub const COM1: u16 = 0x3F8; // Base port address for first serial communication port
 
@@ -28,13 +29,4 @@ pub struct Ide {
     pub idelock: Mutex<()>,
     pub idequeue: Mutex<Option<Box<Buf>>>,
     pub havedisk1: AtomicBool,
-}
-
-#[derive(Clone)]
-pub struct Buf {
-    pub dev: u32,
-    pub blockno: usize,
-    pub flags: u8,
-    pub data: [u8; SECTOR_SIZE],
-    pub qnext: Option<Box<Buf>>,
 }

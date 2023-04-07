@@ -1,10 +1,12 @@
 use crate::x86::helpers::{inb, outb, inw, outw};
+use crate::fs::defs::Buf;
+use crate::println;
 use alloc::boxed::Box;
 use core::sync::atomic::{AtomicBool, Ordering};
+use alloc::sync::Arc;
 use spin::Mutex;
 use lazy_static::lazy_static;
 use super::defs::*;
-use crate::println;
 
 impl Ide {
     // Constructor for Ide Struct
@@ -22,6 +24,7 @@ impl Ide {
             let r = inb(0x1f7);
             (r & (IDE_BSY | IDE_DRDY)) != IDE_DRDY
         } {}
+        
         if checkerr {
             let r = inb(0x1f7);
             if (r & (IDE_DF | IDE_ERR)) != 0 {
@@ -51,9 +54,12 @@ impl Ide {
 
     // Starts processing requests and sends necessary data to the IDE device
     fn idestart(&mut self, b: &mut Buf) {
+        println!("IDESTART: START");
+        println!("IDESTART: BEGINNING OF METHOD: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
         if b.blockno >= FS_SIZE {
             panic!("incorrect blockno");
         }
+        
         let sector_per_block = B_SIZE / SECTOR_SIZE;
         let sector = b.blockno * sector_per_block;
         let read_cmd = if sector_per_block == 1 {
@@ -61,6 +67,7 @@ impl Ide {
         } else {
             IDE_CMD_RDMUL
         };
+        
         let write_cmd = if sector_per_block == 1 {
             IDE_CMD_WRITE
         } else {
@@ -81,6 +88,7 @@ impl Ide {
         
         // Checks if dirty bit is set in the buffer and if it is, write 
         if b.flags & B_DIRTY != 0 {
+            println!("IDESTART: WRITING");
             outb(0x1f7, write_cmd);
             for i in (0..B_SIZE).step_by(4) {
                 let data = u32::from_le_bytes([b.data[i], b.data[i + 1], b.data[i + 2], b.data[i + 3]]);
@@ -89,76 +97,124 @@ impl Ide {
                 }
             }
         } else {
+            println!("IDESTART: READING");
             outb(0x1f7, read_cmd);
         }
+
+        self.ideintr(b);
+        
+        println!("IDESTART: ENDING OF METHOD: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
+        println!("IDESTART: END");
     }
-    
-    pub fn ideintr(&mut self) {
+
+    // Interrupt handler. Currently using busy waiting but can be edited by deleting the final
+    // while loop and uncommenting the wakeup call.
+    pub fn ideintr(&mut self, b: &mut Buf) {
+        println!("IDEINTR: START");
         let idewait_result = self.idewait(true).is_ok();
 
         let mut queue = self.idequeue.lock();
         let mut next_buf_option = None;
-
-        if let Some(mut b) = queue.take() {
-            // Read data if needed.
-            if b.flags & B_DIRTY == 0 && idewait_result {
-                for i in (0..B_SIZE).step_by(4) {
-                    unsafe {
-                        let data = inw(0x1f0);
-                        b.data[i..i + 4].copy_from_slice(&data.to_le_bytes());
-                    }
+        
+        // If dirty bit is not set, it must be a read
+        if b.flags & B_DIRTY == 0 && idewait_result {
+            for i in (0..B_SIZE).step_by(4) {
+                unsafe {
+                    let data = inw(0x1f0);
+                    b.data[i..i + 4].copy_from_slice(&data.to_le_bytes());
                 }
             }
+        }
 
-            // Update buffer flags
-            b.flags |= B_VALID;
-            b.flags &= !B_DIRTY;
+        println!("IDEINTR: PRECHANGE: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
 
-            // Wake process waiting for this buf (if using a real scheduler).
+        // Update buffer flags
+        b.flags |= B_VALID;
+        b.flags &= !B_DIRTY;
+        
+        println!("IDEINTR: POSTCHANGE: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
 
-            // Start disk on next buf in queue
-            if let Some(next_buf) = b.qnext.take() {
-                next_buf_option = Some(next_buf);
-            }
+        // In a real scheduler, you would wake up the process waiting for this buf here.
+        // wakeup(b);
 
-            *queue = Some(b);
+        // Set queue to next val
+        *queue = b.qnext.clone();
+
+        // Start disk on next buf in queue
+        if let Some(next_buf) = queue.take() {
+            next_buf_option = Some(next_buf);
+        }
+        
+        if queue.is_some() {
+            println!("IDEINTR: QUEUE IS SOME AFTER NEXT");
+        } else {
+            println!("IDEINTR: QUEUE IS EMPTY AFTER NEXT");
         }
 
         drop(queue); // Explicitly drop the lock to release the borrow of self
-
+        
         if let Some(mut next_buf) = next_buf_option {
             self.idestart(&mut next_buf);
         }
+
+        // Busy-wait for the operation to complete
+        while self.idewait(true).is_err() {}
+        println!("IDEINTR: END");
     }
     
-    // Synces buffer and disk
+    // Not working version that compiles
     pub fn iderw(&mut self, b: &mut Buf) {
-        let mut queue = self.idequeue.lock();
-        let mut next_buf = None;
-
-        // Append b to idequeue
-        b.qnext = queue.take();
-        *queue = Some(Box::new(b.clone()));
-
-        // Check if disk needs to be started
-        if queue.is_some() {
-            next_buf = b.qnext.take();
+        
+        println!("IDERW CALLED");
+        if (b.flags & (B_VALID | B_DIRTY)) == B_VALID {
+            panic!("iderw: nothing to do");
+        }
+        if b.dev != 0 && !self.havedisk1.load(Ordering::SeqCst) {
+            panic!("iderw: ide disk 1 not present");
         }
         
-        drop(queue); // Explicitly drop the lock to release the borrow of self
+        // Acquire lock to queue
+        let mut queue = self.idequeue.lock();
+        let mut start_disk = false;
 
-        self.idestart(&mut next_buf.unwrap());
+        // Check if the buffer will be the only value in the queue 
+        if queue.is_none() {
+            start_disk = true;
+        }
+
+        // Append b to back of queue
+        b.qnext = None;
+        let mut pp = &mut *queue;
+        while let Some(p) = pp {
+            pp = &mut p.qnext;
+        }
+        *pp = Some(Box::new(b.clone()));
+
+        drop(queue); // Explicitly drop the lock to release the borrow of self
+        
+        let done_flag = Arc::new(AtomicBool::new(false));
+
+        if start_disk {
+            println!("IDERW: BEFORE IDESTART: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
+            self.idestart(b);
+            println!("IDERW: IDESTART: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
+        }
         
         // Wait for request to finish (if using a real scheduler).
+        // sleep() called here once scheduler impl
+        // while !done_flag.load(Ordering::SeqCst) {}
+         
+        while b.flags & (B_VALID | B_DIRTY) != B_VALID {}
+        println!("IDERW: END");
     }
 
 }
 
 lazy_static! {
-    pub static ref IDE: Mutex<Ide> = Mutex::new(Ide::new());
+    pub static ref GLOBAL_IDE: Mutex<Ide> = Mutex::new(Ide::new());
 }
 
 pub fn setup_ide() {
-    IDE.lock().ideinit();
+    GLOBAL_IDE.lock().ideinit();
     println!("[KERNEL] Disk Initialized");
 }
