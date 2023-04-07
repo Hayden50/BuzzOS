@@ -22,7 +22,7 @@ use core::panic::PanicInfo;
 use crate::devices::defs::*;
 use crate::fs::defs::Buf;
 use crate::devices::ide::GLOBAL_IDE;
-// use alloc::vec::Vec;
+use alloc::vec::Vec;
 
 // Uses C calling convention instead of Rust. no_mangle removes name mangling when compiled.
 // _start is the default entry point for most systems. Function is diverging as the Kernel should
@@ -48,17 +48,13 @@ pub unsafe extern "C" fn _start() -> ! {
     // Initialize IDE Device
     devices::ide::setup_ide();
 
-    test_write();
-    test_read();
+    test_disk_operations();
 
-    println!("Goodbye");
-    
     loop {}
 }
 
-fn test_write() {
+fn test_write(block_number: usize) {
     println!("-------------------START WRITE---------------------");
-    let block_number = 24;
     let mut write_buf = Buf::new(0, block_number);
     let pattern: [u8; 512] = [0xAB; 512];
 
@@ -72,9 +68,8 @@ fn test_write() {
     println!("-------------------END WRITE---------------------");
 }
 
-fn test_read() {
+fn test_read(block_number: usize) {
     println!("-------------------START READ---------------------");
-    let block_number = 0;
     // Read the same block from the disk
     let mut read_buf = Buf::new(0, block_number);
     GLOBAL_IDE.lock().iderw(&mut read_buf);
@@ -84,65 +79,61 @@ fn test_read() {
     println!("-------------------END READ---------------------");
 }
 
-// fn test_disk_operations(ide: &mut Ide) {
-//     
-//     
-//     let block_number = 24;
-//     let mut write_buf = Buf::new(0, block_number);
-//     let pattern: [u8; 512] = [0xAB; 512];
-//
-//     println!("LIB: Before first iderw");
-//     // Write the pattern to the disk
-//     write_buf.data.copy_from_slice(&pattern);
-//     write_buf.flags |= B_DIRTY;
-//     ide.iderw(&mut write_buf);
-//
-//     println!("LIB: second iderw");
-//     // Read the same block from the disk
-//     let mut read_buf = Buf::new(0, block_number);
-//     ide.iderw(&mut read_buf);
-//
-//     // Verify that the written and read data match
-//     assert_eq!(write_buf.data, read_buf.data, "Data mismatch after reading the written block");
-//
-//     // Test writing and reading multiple blocks
-//     let block_count = 10;
-//     let mut write_bufs = Vec::with_capacity(block_count);
-//     let mut read_bufs = Vec::with_capacity(block_count);
-//
-//     for i in 0..block_count {
-//         let mut buf = Buf::new(0, block_number + i);
-//         buf.data.iter_mut().enumerate().for_each(|(j, b)| *b = (i + j) as u8);
-//         buf.flags |= B_DIRTY;
-//         write_bufs.push(buf);
-//     }
-//
-//     for buf in &mut write_bufs {
-//         ide.iderw(buf);
-//     }
-//
-//     for i in 0..block_count {
-//         let mut buf = Buf::new(0, block_number + i);
-//         read_bufs.push(buf);
-//     }
-//
-//     for buf in &mut read_bufs {
-//         ide.iderw(buf);
-//     }
-//
-//     for (i, (write_buf, read_buf)) in write_bufs.iter().zip(read_bufs.iter()).enumerate() {
-//         assert_eq!(write_buf.data, read_buf.data, "Data mismatch in block {} after reading the written block", i);
-//     }
-//
-//     // Test handling of out-of-bounds block numbers
-//     let invalid_block_number = 1_000_000; // Assuming this is an invalid block number
-//     let mut invalid_buf = Buf::new(0, invalid_block_number);
-//     invalid_buf.flags |= B_DIRTY;
-//
-//     // This should either panic or return an error, depending on your implementation
-//     ide.iderw(&mut invalid_buf);
-// }
+fn test_disk_operations() {
+    
+    let block_number = 24;
+    let mut write_buf = Buf::new(0, block_number);
+    let pattern: [u8; 512] = [0xAB; 512];
 
+    // Write the pattern to the disk
+    write_buf.data.copy_from_slice(&pattern);
+    write_buf.flags |= B_DIRTY;
+    GLOBAL_IDE.lock().iderw(&mut write_buf);
+
+    // Read the same block from the disk
+    let mut read_buf = Buf::new(0, block_number);
+    GLOBAL_IDE.lock().iderw(&mut read_buf);
+
+    // Verify that the written and read data match
+    assert_eq!(write_buf.data, read_buf.data, "Data mismatch after reading the written block");
+
+    // Test writing and reading multiple blocks
+    let block_count = 10;
+    let mut write_bufs = Vec::with_capacity(block_count);
+    let mut read_bufs = Vec::with_capacity(block_count);
+
+    for i in 0..block_count {
+        let mut buf = Buf::new(0, block_number + i);
+        buf.data.iter_mut().enumerate().for_each(|(j, b)| *b = (i + j) as u8);
+        buf.flags |= B_DIRTY;
+        write_bufs.push(buf);
+    }
+
+    for buf in &mut write_bufs {
+        GLOBAL_IDE.lock().iderw(buf);
+    }
+
+    for i in 0..block_count {
+        let mut buf = Buf::new(0, block_number + i);
+        read_bufs.push(buf);
+    }
+
+    for buf in &mut read_bufs {
+        GLOBAL_IDE.lock().iderw(buf);
+    }
+
+    for (i, (write_buf, read_buf)) in write_bufs.iter().zip(read_bufs.iter()).enumerate() {
+        assert_eq!(write_buf.data, read_buf.data, "Data mismatch in block {} after reading the written block", i);
+    }
+
+    // Test handling of out-of-bounds block numbers
+    let invalid_block_number = 1_000_000; // Assuming this is an invalid block number
+    let mut invalid_buf = Buf::new(0, invalid_block_number);
+    invalid_buf.flags |= B_DIRTY;
+
+    // This should either panic or return an error, depending on your implementation
+    GLOBAL_IDE.lock().iderw(&mut invalid_buf);
+}
 
 // Once the Kernel panics, enter an infinite loop
 #[panic_handler]

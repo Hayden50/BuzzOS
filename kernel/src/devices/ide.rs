@@ -3,7 +3,6 @@ use crate::fs::defs::Buf;
 use crate::println;
 use alloc::boxed::Box;
 use core::sync::atomic::{AtomicBool, Ordering};
-use alloc::sync::Arc;
 use spin::Mutex;
 use lazy_static::lazy_static;
 use super::defs::*;
@@ -100,10 +99,10 @@ impl Ide {
             outb(0x1f7, read_cmd);
         }
 
+        self.idewait(false).unwrap();
         self.ideintr(b);
         
-        println!("IDESTART: ENDING OF METHOD: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
-        println!("IDESTART: END");
+        println!("IDESTART: END OF METHOD: B_VALID: {}, B_DIRTY: {}", b.flags & B_VALID, b.flags & B_DIRTY);
     }
 
     // Interrupt handler. Currently using busy waiting but can be edited by deleting the final
@@ -138,12 +137,14 @@ impl Ide {
 
         // Start disk on next buf in queue
         if let Some(next_buf) = queue.take() {
+            println!("IDEINTR: TAKING QUEUE BEFORE DROP");
             next_buf_option = Some(next_buf);
         }
         
         drop(queue); // Explicitly drop the lock to release the borrow of self
         
         if let Some(mut next_buf) = next_buf_option {
+            println!("IDEINTR: IDESTART CALLED IN FN");
             self.idestart(&mut next_buf);
         }
 
@@ -151,6 +152,7 @@ impl Ide {
         while self.idewait(true).is_err() {
             println!("IDEINTR: WAITING");
         }
+         
         println!("IDEINTR: END");
     }
     
@@ -197,7 +199,6 @@ impl Ide {
         while b.flags & (B_VALID | B_DIRTY) != B_VALID {}
         println!("IDERW: END");
     }
-
 }
 
 lazy_static! {
