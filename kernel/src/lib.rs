@@ -44,6 +44,9 @@ pub unsafe extern "C" fn _start() -> ! {
     // Initialize IDE Device
     devices::ide::setup_ide();
 
+    // Enable Buffer Caching
+    fs::bio::setup_bcache();
+
     // Scheduler
     // scheduler::process::spawn_init_process();
     // scheduler::scheduler::setup_scheduler();
