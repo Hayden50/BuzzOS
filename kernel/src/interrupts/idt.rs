@@ -2,7 +2,7 @@ use core::{marker::PhantomData, mem::size_of};
 
 use lazy_static::lazy_static;
 
-use crate::{interrupts::handlers::*, println, x86::helpers::lidt};
+use crate::{interrupts::interrupt_handlers::*, println, x86::helpers::lidt};
 
 use super::defs::*;
 
@@ -21,6 +21,26 @@ impl<F> Gate<F> {
             handler: PhantomData,
             flags,
         }
+    }
+
+    // Implementation of an empty gate. Used to initialized gates
+    #[inline]
+    pub const fn user_interrupt() -> Self {
+        // Ensure our gate is an interrupt at startup.
+        let flags = GateFlags::INTGATE as u8 | GateFlags::DPL3 as u8;
+
+        Gate {
+            fn_addr_low: 0,
+            fn_addr_high: 0,
+            segment_selector: 0,
+            reserved: 0,
+            handler: PhantomData,
+            flags,
+        }
+    }
+
+    pub const fn set_flags(&mut self, flags: u8) {
+        self.flags = flags;
     }
 
     // Set gate handler. Accepts the 64-bits address of the handler function
@@ -86,7 +106,7 @@ impl IDT {
             machine_check: Gate::empty(),                       // 18
             simd_floating_point: Gate::empty(),                 // 19
             virtualization: Gate::empty(),                      // 20
-            cp_protection_exception: Gate::empty(),             // 21
+            control_protection_exception: Gate::empty(),        // 21
             reserved_7: [Gate::empty(); 7],                     // 22-28
             hv_injection_exception: Gate::empty(),              // 29
             vmm_communication_exception: Gate::empty(),         // 30
@@ -134,11 +154,15 @@ lazy_static! {
     static ref GLOBAL_IDT: IDT = {
         let mut global_idt = IDT::new();
 
-        // Setup Handler
+        // Setup User System Call Interrupt Handler at Gate 64
+        global_idt.gp_interrupts[15].set_flags(GateFlags::TRAPGATE as u8 | GateFlags::DPL3 as u8);
+        global_idt.gp_interrupts[15].set_handler_fn(user_interrupt_switch);
+
+        // Setup Handlers
         global_idt.div_by_zero.set_handler_fn(div_by_zero_handler);
         global_idt.breakpoint.set_handler_fn(breakpoint_handler);
         global_idt.gen_protection_fault.set_handler_fn(gen_protection_fault);
-        // global_idt.double_fault.set_handler_fn(double_fault_handler);
+        global_idt.double_fault.set_handler_fn(double_fault_handler);
         global_idt.page_fault.set_handler_fn(page_fault);
         global_idt.overflow.set_handler_fn(overflow);
         global_idt.bound_range_exceeded.set_handler_fn(bound_range);

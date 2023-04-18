@@ -1,13 +1,13 @@
-# Better Documentation
-# Manual for Students
-# Brush-Up C Concepts (Questions about Pointers)
-# Virtual Memory + Copy-On-Write
-
 [env]
+USER_PROGRAMS = """
+user/init
+user/test
+"""
 KERNEL_FILES = """
-kernel/src/boot/linker.ld
-build/entry.o
-build/kernel.a
+entry.o
+switch.o
+kernel.o
+trap.o
 """
 BOOTLOADER_FILES = """
 bootloader/src/linker.ld
@@ -37,7 +37,20 @@ script = [
     "x86_64-elf-ld -m elf_i386 -e _start_16 -Ttext=0x7C00 --oformat binary -o ../build/boot.bin ../build/boot.elf",
     "x86_64-elf-ld -m elf_i386 -e _start_16 -Ttext=0x7C00 --oformat elf32-i386 -o ../build/bootloader.elf ../build/boot.elf",
     "objdump -S ../build/bootloader.elf > ../build/boot.asm",
+    "objdump -S ../build/kernel.elf > ../build/kernel.asm",
     "rm ../build/boot.elf",
+]
+
+[tasks.build_user]
+dependencies = ["clean"]
+workspace = false
+script = [
+    "cd user",
+    "cargo build",
+
+    "cd ../build",
+    "mkdir user",
+    "find ../user/target/x86-target/debug/ ! -name \"*.*\" -type f -maxdepth 1 -exec cp {} ./user ';'",
 ]
 
 # Build Kernel
@@ -49,12 +62,22 @@ script = [
 
     # Compile Kernel and move to build Kernel
     "nasm -f elf32 src/boot/entry.asm -o ../build/entry.o",
+    "nasm -f elf32 src/asm/switch.asm -o ../build/switch.o",
+    "nasm -f elf32 src/asm/trap.asm -o ../build/trap.o",
+    "nasm -f bin src/asm/init.asm -o ../build/init",
+
     "RUSTFLAGS=-g cargo build --target x86-target.json",
-    "cd ..; cp target/x86-target/debug/libbuzz_os_kernel.a build/kernel.a",
+    "cd ..; cp target/x86-target/debug/libbuzz_os_kernel.a build/kernel.o",
     
     # Link Kernel binaries
-    "x86_64-elf-ld -m elf_i386 -n -o build/kernel.elf -T ${KERNEL_FILES}",
-    "rm build/kernel.a build/entry.o"
+    "cd build",
+    "x86_64-elf-ld -m elf_i386 -n -o kernel.elf -T ../kernel/src/boot/linker.ld entry.o switch.o kernel.o trap.o --oformat elf32-i386 -b binary init",
+    "rm kernel.o entry.o switch.o trap.o init"
+  
+    # # ORIGINAL MAKEFILE: DOES NOT WORK WITH M1
+    # "cd build",
+    # "ld -n -T ../kernel/src/boot/linker.ld -o kernel.elf ${KERNEL_FILES} -b binary init",
+    # "rm kernel.o entry.o"
 ]
 
 # Build bootloader asm files

@@ -53,6 +53,12 @@ macro_rules! PAGE_DIR_INDEX {
 /// GDT Definitions
 pub const N_DESCRIPTORS: usize = 6;
 
+pub const KERNEL_CODE_SEG_ENTRY: u16 = 1;
+pub const KERNEL_DATA_SEG_ENTRY: u16 = 2;
+pub const USER_CODE_SEG_ENTRY: u16 = 3;
+pub const USER_DATA_SEG_ENTRY: u16 = 4;
+pub const TASK_SWITCH_SEG_ENTRY: u16 = 5;
+
 pub const GDT_FLAG_L: u8 = 0x2;
 pub const GDT_FLAG_DB: u8 = 0x4;
 pub const GDT_FLAG_G: u8 = 0x8;
@@ -116,7 +122,7 @@ pub struct MemoryLayoutEntry {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Page {
-    pub address: *const usize,
+    pub address: *const usize, // TODO: Revamp how pages work
 }
 
 #[derive(Debug)]
@@ -153,8 +159,58 @@ bitflags! {
     }
 }
 
+#[repr(C)]
+#[derive(Default)]
+pub struct TaskStateSegment {
+    // Segment Selectors and Previous Task Link Field
+    link: u32,
+    pub esp0: u32,
+    pub ss0: u16,
+    reserved_0: u16,
+    esp1: u32,
+    ss1: u16,
+    reserved_1: u16,
+    esp2: u32,
+    ss2: u16,
+    reserved_2: u16,
+
+    // Registers
+    cr3: u32,
+    eip: u32,
+    eflags: u32,
+    eax: u32,
+    ecx: u32,
+    edx: u32,
+    ebx: u32,
+    esp: u32,
+    ebp: u32,
+    esi: u32,
+    edi: u32,
+
+    // Selectors
+    pub es: u16,
+    reserved_5: u16,
+    pub cs: u16,
+    reserved_6: u16,
+    pub ss: u16,
+    reserved_7: u16,
+    pub ds: u16,
+    reserved_8: u16,
+    pub fs: u16,
+    reserved_9: u16,
+    pub gs: u16,
+    reserved_10: u16,
+    ldtr: u16,
+    reserved_11: u16,
+    reserved_12: u16,
+
+    // I/O Mapping
+    iopb: u16,
+}
+
 // Common segments
 pub const KERNEL_CODE_SEGMENT: u64 = DescriptorFlags::KERNEL_CODE32.bits();
 pub const KERNEL_DATA_SEGMENT: u64 = DescriptorFlags::KERNEL_DATA.bits();
 pub const USER_CODE_SEGMENT: u64 = DescriptorFlags::USER_CODE64.bits();
 pub const USER_DATA_SEGMENT: u64 = DescriptorFlags::USER_DATA.bits();
+pub const TASK_STATE_SEGMENT: u64 = 0;

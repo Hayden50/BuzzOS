@@ -59,7 +59,7 @@ SECTIONS {
 
 	PROVIDE(edata = .);
 
-	.bss : AT(ADDR(.bss) - 0x80000000) {
+	.bss :  {
 		*(.bss)
 	}
 

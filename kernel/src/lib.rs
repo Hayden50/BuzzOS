@@ -9,6 +9,7 @@ pub mod devices;
 pub mod interrupts;
 pub mod memory;
 pub mod misc;
+pub mod scheduler;
 pub mod structures;
 pub mod threading;
 pub mod x86;
@@ -43,6 +44,12 @@ pub unsafe extern "C" fn _start() -> ! {
     // Initialize IDE Device
     devices::ide::setup_ide();
 
+    // Scheduler
+    // scheduler::process::spawn_init_process();
+    // scheduler::scheduler::setup_scheduler();
+
+    // Should never proceeed
+    // panic!("[FATAL] Returned from Scheduler");
     loop {}
 }
 

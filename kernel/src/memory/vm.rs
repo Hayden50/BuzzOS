@@ -7,8 +7,8 @@ use super::{
     mem::{MEMORY_REGION, PHYSICAL_TOP},
 };
 use crate::{
-    memory::mem::memset, println, structures::heap_linked_list::HeapLinkedList, x86::helpers::lcr3,
-    P2V, PAGE_DIR_INDEX, PAGE_TABLE_INDEX, ROUND_DOWN, ROUND_UP, V2P,
+    memory::mem::memset, println, structures::heap_linked_list::HeapLinkedList,
+    x86::helpers::load_cr3, P2V, PAGE_DIR_INDEX, PAGE_TABLE_INDEX, ROUND_DOWN, ROUND_UP, V2P,
 };
 
 extern "C" {
@@ -84,8 +84,9 @@ pub fn deallocate_page(page: Page) {
     FREE_PAGE_LIST.lock().push(page);
 }
 
-/// Perform page mapping into the provided page directory. Based on the virtual address provided,
-/// it first finds the index of the page into the Page Directory, then the index into the page table.
+/// Walk Page Directory uses the provided virtual memory address (virtual_address) to index
+/// the page directory, and then the page table. If the page table is not present, allocates
+/// a new page to act as the page table.
 fn walk_page_dir(
     page_dir: Page,
     virtual_address: usize,
@@ -93,15 +94,15 @@ fn walk_page_dir(
 ) -> Result<*mut usize, &'static str> {
     let page_directory_offset = PAGE_DIR_INDEX!(virtual_address as isize);
     let page_directory_entry = unsafe { *page_dir.address.offset(page_directory_offset) as usize };
-    let is_entry_valid = (page_directory_entry & PTE_P) > 0;
+    let is_entry_present = (page_directory_entry & PTE_P) > 0;
 
     let mut page_table: Page = Page {
         address: 0 as *const usize,
     };
 
     // If entry is already present, set page table simply as the address pointed by the entry
-    if is_entry_valid == true {
-        page_table.address = (page_directory_entry & !0xFFF) as *const usize;
+    if is_entry_present == true {
+        page_table.address = P2V!(page_directory_entry & !0xFFF) as *const usize;
     } else {
         // Since page was not found, we need to allocate
         if !should_allocate {
@@ -127,7 +128,7 @@ fn walk_page_dir(
 /// Perform page mapping of a range into the provided page directory.
 /// Creates all the necessary tables to accomodate pages from start_address
 /// to end_address, starting for virtual_address.
-fn map_pages(
+pub fn map_pages(
     page_dir: Page,
     virtual_address: usize,
     size: usize,
@@ -144,7 +145,7 @@ fn map_pages(
 
         // If the page is already mapped, then something went wrong
         if is_page_entry_present {
-            return Err("Page table was remapped");
+            return Err("[FATAL] Page was remapped");
         }
 
         // Map the page entry to the physical address
@@ -163,7 +164,7 @@ fn map_pages(
 
 /// Maps each one of the entries of KERNEL_MEMORY_LAYOUT into a new page directory,
 /// later switching CR3 to this new page directory.
-fn setup_kernel_page_tables() -> Result<Page, &'static str> {
+pub fn setup_kernel_page_tables() -> Result<Page, &'static str> {
     let page_dir: Page = allocate_page()?;
     let physical_top = unsafe { *PHYSICAL_TOP.lock() };
 
@@ -187,7 +188,7 @@ fn setup_kernel_page_tables() -> Result<Page, &'static str> {
     *kernel_page_dir = Some(page_dir.address as usize);
 
     // Switch to new page directory
-    lcr3(V2P!(kernel_page_dir.unwrap()));
+    load_cr3(V2P!(kernel_page_dir.unwrap()));
 
     return Ok(page_dir);
 }

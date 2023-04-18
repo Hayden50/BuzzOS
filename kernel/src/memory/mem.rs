@@ -6,8 +6,7 @@
 use lazy_static::lazy_static;
 use spin::Mutex;
 
-use crate::{x86::helpers::stosb, P2V, ROUND_UP};
-
+use crate::{print, println, x86::helpers::stosb, P2V, ROUND_UP};
 use super::defs::{MemoryRegion, Page, KERNEL_BASE};
 
 extern "C" {
@@ -28,6 +27,32 @@ pub fn memset(address: usize, value: u8, length: usize) {
     stosb(address, value, length);
 }
 
+pub unsafe fn memmove(src: usize, dst: usize, mut length: usize) -> *mut usize {
+    let mut src = src as *mut u8;
+    let mut dst = dst as *mut u8;
+
+    if src < dst && src.offset(length as isize) > dst {
+        src = src.offset(length as isize);
+        dst = src.offset(length as isize);
+
+        while length > 0 {
+            length -= 1;
+            dst = dst.offset(-1);
+            src = src.offset(-1);
+            *dst = *src;
+        }
+    } else {
+        while length > 0 {
+            length -= 1;
+            *dst = *src;
+            dst = dst.offset(1);
+            src = src.offset(1);
+        }
+    }
+
+    return dst as *mut usize;
+}
+
 /// Defines a memory region from start (pointer) to end (integer). This is used
 /// in the initial Kernel loading procedure. Since all pages from V2P!(KERNEL_END) to
 /// PHYSICAL_TOP are guaranteed to be unused by the linker, we can allocate new pages
@@ -44,7 +69,7 @@ impl MemoryRegion {
     /// Gets the next page available and increase the counter. Once no more pages are available,
     /// raises an exception.
     pub fn next(&mut self, number_pages: usize) -> Result<Page, &'static str> {
-        if self.start as usize + 4096 * number_pages > self.end {
+        if self.index as usize + 4096 * number_pages > self.end {
             return Err("[ERR] Failure to Allocate Page");
         }
 

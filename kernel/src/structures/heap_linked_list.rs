@@ -27,14 +27,6 @@ impl<T> HeapLinkedList<T> {
         self.head = Some(node);
     }
 
-    pub fn push_node(&mut self, mut node: Box<Node<T>>) {
-        let previous_head = core::mem::replace(&mut self.head, None);
-
-        node.next = previous_head;
-
-        self.head = Some(node);
-    }
-
     pub fn pop(&mut self) -> Option<T> {
         match core::mem::replace(&mut self.head, None) {
             None => None,
@@ -45,13 +37,10 @@ impl<T> HeapLinkedList<T> {
         }
     }
 
-    pub fn pop_node(&mut self) -> Option<Box<Node<T>>> {
-        match core::mem::replace(&mut self.head, None) {
+    pub fn peek(&self) -> Option<&Node<T>> {
+        match self.head {
             None => None,
-            Some(mut node) => {
-                core::mem::replace(&mut self.head, node.next.take());
-                Some(node)
-            }
+            Some(ref node) => Some(node.as_ref()),
         }
     }
 
