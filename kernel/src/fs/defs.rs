@@ -7,7 +7,7 @@ use hashbrown::HashMap;
 
 pub const MAX_BUFS: usize = 10; // Maximum buffers in buffer cache
 
-#[derive(Clone)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Buf {
     pub dev: u32, // Device identifier (disk id)
     pub blockno: usize, // Block number of disk
