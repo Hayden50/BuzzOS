@@ -5,7 +5,7 @@ use spin::Mutex;
 
 use crate::memory::defs::*;
 use crate::x86::defs::ShortSegmentDescriptor;
-use crate::x86::helpers::{load_cs, ltr};
+use crate::x86::helpers::load_cs;
 use crate::{println, x86::helpers::lgdt};
 
 use super::defs;
