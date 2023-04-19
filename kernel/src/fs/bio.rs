@@ -1,11 +1,8 @@
 use super::defs::*; 
 use spin::Mutex;
-use alloc::{
-    boxed::Box,
-    collections::VecDeque,
-};
+use alloc::collections::VecDeque;
 use lazy_static::lazy_static;
-use crate::{println, devices::{defs::B_VALID, ide::GLOBAL_IDE}};
+use crate::{println, devices::{defs::{B_VALID, B_DIRTY}, ide::GLOBAL_IDE}};
 use hashbrown::HashMap;
 
 impl BufCache {
@@ -54,7 +51,7 @@ impl BufCache {
     
     // Returns a buffer that contains the data from the disk at the specified dev / block
     pub fn buf_read(&mut self, dev: u32, blockno: usize) -> &Buf {
-        let mut buffer = self.buf_get(dev, blockno);
+        let buffer = self.buf_get(dev, blockno);
 
         if buffer.flags & B_VALID == 0 {
             GLOBAL_IDE.lock().iderw(buffer);
@@ -63,8 +60,11 @@ impl BufCache {
         buffer
     }
     
-    pub fn buf_write() {}
-    pub fn buf_release() {}
+    // Writes a buffer's data to disk
+    pub fn buf_write(&mut self, buffer: &mut Buf) {
+        buffer.flags |= B_DIRTY;
+        GLOBAL_IDE.lock().iderw(buffer);
+    }
     
 }
 
