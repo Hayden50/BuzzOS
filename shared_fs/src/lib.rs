@@ -1,10 +1,9 @@
-use serde::{Serialize, Deserialize};
-
+#![no_std]
 pub const ROOTINO: u32 = 1;  // root i-number
 pub const BSIZE: u32 = 512;  // block size
 pub const NDIRECT: u32 = 12;
  
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Superblock {
     pub size: u32,          // Size of FS Image 
     pub nblocks: u32,       // Number of data blocks
@@ -15,7 +14,7 @@ pub struct Superblock {
     pub bmapstart: u32,     // Block number of first free map block
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct Inode {
     pub inode_type: InodeType,                      // Represents type of file the Inode references
     pub major_dev: u8,                              // Major device number
@@ -31,7 +30,7 @@ pub struct Dirent {
 }
 
 #[repr(u8)]
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum InodeType {
     Free = 0,
     Dir = 1,

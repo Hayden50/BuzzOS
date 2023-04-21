@@ -52,6 +52,25 @@ script = [
     "mkdir user",
     "find ../user/target/x86-target/debug/ ! -name \"*.*\" -type f -maxdepth 1 -exec cp {} ./user ';'",
 ]
+  
+[tasks.build_mkfs]
+dependencies = ["clean"]
+workspace = false
+script = [    
+  "cd mkfs",    
+  "cargo build",    
+  "cd ../build",
+  "cp ../mkfs/target/debug/mkfs ./",
+]
+
+[tasks.create_fs]
+dependencies = ["build_mkfs"]
+workspace = false
+script = [
+    "cd build",
+    "./mkfs fs.img",
+    "cd ..",
+]
 
 # Build Kernel
 [tasks.build_kernel]
@@ -80,22 +99,22 @@ script = [
     # "rm kernel.o entry.o"
 ]
 
-# Build bootloader asm files
+# Build and run
 [tasks.build_run]
-dependencies = ["build_kernel", "build_bootloader"]
+dependencies = ["build_kernel", "build_bootloader", "create_fs"]
 workspace = false
 script = [
-    # Generate disk image
+    # Generate kernel disk image
     "dd if=/dev/zero of=build/buzz.img count=10000 status=none",
     "dd if=build/boot.bin of=build/buzz.img conv=notrunc status=none",
     "dd if=build/kernel.elf of=build/buzz.img seek=1 conv=notrunc status=none",
     "rm build/boot.bin",
     
     # Start OS
-    "qemu-system-i386 -nographic -drive file=build/buzz.img,index=0,media=disk,format=raw -no-shutdown -no-reboot -m 512",
+    "qemu-system-i386 -nographic -drive file=build/buzz.img,index=0,media=disk,format=raw -drive file=build/fs.img,index=1,media=disk,format=raw -no-shutdown -no-reboot -m 512",
 ]
 
-# Build bootloader asm files
+# Build and run with GDB
 [tasks.gdb]
 dependencies = ["build_kernel", "build_bootloader"]
 workspace = false
@@ -106,8 +125,8 @@ script = [
     "dd if=build/kernel.elf of=build/buzz.img seek=1 conv=notrunc status=none",
     "rm build/boot.bin",
     
-    # Start OS
-    "qemu-system-i386 -s -S -drive file=build/buzz.img,index=0,media=disk,format=raw -no-reboot -no-shutdown -nographic -serial mon:stdio -m 512",
+    # Start OS with GDB
+    "qemu-system-i386 -s -S -drive file=build/buzz.img,index=0,media=disk,format=raw -drive file=build/fs.img,index=1,media=disk,format=raw -no-reboot -no-shutdown -nographic -serial mon:stdio -m 512",
 ]
 
 [tasks.default]

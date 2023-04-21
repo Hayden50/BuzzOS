@@ -1,27 +1,30 @@
-use shared_fs::{Inode, InodeType, Superblock};
+use shared_fs::Superblock;
+// use shared_fs::{Inode, InodeType, Superblock};
 use std::env;
 use std::fs::File;
 use std::io::{Result, Seek, SeekFrom, Write};
 use std::path::Path;
+use byteorder::{ByteOrder, LittleEndian};
 
 const FS_IMG: &str = "fs.img";
 const BSIZE: u32 = 512; // Size of one block
 const FSSIZE: u32 = 1000; // Number of blocks in FS
 const LOGSIZE: u32 = 30; // Number of blocks dedicated to log
 
-const NDIR: u32 = 12;
-const NINDIRECT: u32 = BSIZE as u32 / 4;
-const MAXFILE: u32 = NDIR + NINDIRECT;
+// const NDIR: u32 = 12;
+// const NINDIRECT: u32 = BSIZE as u32 / 4;
+// const MAXFILE: u32 = NDIR + NINDIRECT;
 
-const ROOT_INO: u32 = 1; // Root Inode number
-const IBLOCK: u32 = 2;
-const BBLOCK: u32 = 3;
+// const ROOT_INO: u32 = 1; // Root Inode number
+// const IBLOCK: u32 = 2;
+// const BBLOCK: u32 = 3;
 
 const NINODES: u32 = 200; // Number of Inodes
 const IPB: u32 = BSIZE as u32 / 64; // Inodes per block
 const NINODEBLOCKS: u32 = NINODES / IPB; // Number of blocks holding Inodes
 
 fn main() -> Result<()> {
+    println!("HELLO MKFS");
     // Gathers args into a Vec and makes sure the minimum is met
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
@@ -55,8 +58,8 @@ fn main() -> Result<()> {
     write_superblock(&mut fs_img, &superblock)?;
 
     // Initialize the root directory
-    let root_inode = Inode::new(InodeType::Dir);
-    write_inode(&mut fs_img, ROOT_INO, &root_inode)?;
+    // let root_inode = Inode::new(InodeType::Dir);
+    // write_inode(&mut fs_img, ROOT_INO, &root_inode)?;
 
     // Add any additional files, directories, or user programs to the file system
     // ...
@@ -76,22 +79,47 @@ fn zero_fs(fs_img: &mut File) -> Result<()> {
     Ok(())
 }
 
+// Writes the superblock in to the second block on the disk
 fn write_superblock(fs_img: &mut File, superblock: &Superblock) -> Result<()> {
-    fs_img.seek(SeekFrom::Start(BSIZE as u64))?;
-    let superblock_data = bincode::serialize(superblock).unwrap();
-    fs_img.write_all(&superblock_data)
+    // This moves the pointer to the beginning of the first block 
+    fs_img.seek(SeekFrom::Start(0))?;
+
+    // Creates a buffer with the superblock written in little endian
+    // NOTE: There is probably a better way to do this with serde / bincode but it may 
+    // cause issues with the std environment if you need to deserialize data in kernel
+    let mut sb_bytes: [u8; 28] = [0; 28];
+    LittleEndian::write_u32(&mut sb_bytes[0..4], superblock.size);    
+    LittleEndian::write_u32(&mut sb_bytes[4..8], superblock.nblocks);
+    LittleEndian::write_u32(&mut sb_bytes[8..12], superblock.ninodes);
+    LittleEndian::write_u32(&mut sb_bytes[12..16], superblock.nlog);
+    LittleEndian::write_u32(&mut sb_bytes[16..20], superblock.logstart);
+    LittleEndian::write_u32(&mut sb_bytes[20..24], superblock.inodestart);
+    LittleEndian::write_u32(&mut sb_bytes[24..28], superblock.bmapstart);
+
+    // Writes the buffer into disk
+    fs_img.write(&sb_bytes)?;
+
+    Ok(())
 }
 
 // fn ialloc(i_type: InodeType) {}
 // fn balloc() {}
 
-fn write_inode(fs_img: &mut File, inum: u32, inode: &Inode) -> Result<()> {
-    fs_img.seek(SeekFrom::Start(
-        BSIZE as u64 * (IBLOCK as u64 + inum as u64 / IPB as u64),
-    ))?;
-    let inode_data = bincode::serialize(inode).unwrap();
-    fs_img.write_all(&inode_data)
-}
+// Writes an inode to disk at a specified inum
+// fn write_inode(fs_img: &mut File, inum: u32, inode: &Inode) -> Result<()> {
+    // fs_img.seek(SeekFrom::Start(
+    //     BSIZE as u64 * (IBLOCK as u64 + inum as u64 / IPB as u64),
+    // ))?;
+    // fs_img.write_u8(inode.inode_type as u8)?;
+    // fs_img.write_u8(inode.major_dev)?;
+    // fs_img.write_u8(inode.minor_dev)?;
+    // fs_img.write_u8(inode.num_links)?;
+    // fs_img.write_u32::<LittleEndian>(inode.size)?;
+    // for &address in inode.data_addreses.iter() {
+    //     fs_img.write_u32::<LittleEndian>(address)?;
+    // }
+//     Ok(())
+// }
 
 // Implement additional helper functions to handle file system operations
 // like creating files, directories, writing data blocks, etc.
