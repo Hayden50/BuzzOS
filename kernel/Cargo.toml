@@ -10,6 +10,7 @@ bitflags = "1.0.4"
 pic8259_x86 = "0.1.0"
 hashbrown = "0.13.2"
 shared_fs = {path = "../shared_fs/"}
+endian_codec = "0.1.1"
 
 [dependencies.lazy_static]
 version = "1.0"

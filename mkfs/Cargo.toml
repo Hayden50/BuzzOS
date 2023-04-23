@@ -8,5 +8,5 @@ edition = "2021"
 cargo-features = ["build-std"]
 
 [dependencies]
-byteorder = { version = "1.4.3", default-features = false }
+endian_codec = "0.1.1"
 shared_fs = {path = "../shared_fs/"}

@@ -1,10 +1,13 @@
+// This is a standalone utility that creates the second disk structure (fs.img) when the makefile
+// is run. It runs on the host OS and defines the disk structure of the file system.
+
 use shared_fs::Superblock;
+use endian_codec::{PackedSize, EncodeLE};
 // use shared_fs::{Inode, InodeType, Superblock};
 use std::env;
 use std::fs::File;
 use std::io::{Result, Seek, SeekFrom, Write};
 use std::path::Path;
-use byteorder::{ByteOrder, LittleEndian};
 
 const FS_IMG: &str = "fs.img";
 const BSIZE: u32 = 512; // Size of one block
@@ -24,7 +27,6 @@ const IPB: u32 = BSIZE as u32 / 64; // Inodes per block
 const NINODEBLOCKS: u32 = NINODES / IPB; // Number of blocks holding Inodes
 
 fn main() -> Result<()> {
-    println!("HELLO MKFS");
     // Gathers args into a Vec and makes sure the minimum is met
     let args: Vec<String> = env::args().collect();
     if args.len() < 2 {
@@ -85,19 +87,11 @@ fn write_superblock(fs_img: &mut File, superblock: &Superblock) -> Result<()> {
     fs_img.seek(SeekFrom::Start(0))?;
 
     // Creates a buffer with the superblock written in little endian
-    // NOTE: There is probably a better way to do this with serde / bincode but it may 
-    // cause issues with the std environment if you need to deserialize data in kernel
-    let mut sb_bytes: [u8; 28] = [0; 28];
-    LittleEndian::write_u32(&mut sb_bytes[0..4], superblock.size);    
-    LittleEndian::write_u32(&mut sb_bytes[4..8], superblock.nblocks);
-    LittleEndian::write_u32(&mut sb_bytes[8..12], superblock.ninodes);
-    LittleEndian::write_u32(&mut sb_bytes[12..16], superblock.nlog);
-    LittleEndian::write_u32(&mut sb_bytes[16..20], superblock.logstart);
-    LittleEndian::write_u32(&mut sb_bytes[20..24], superblock.inodestart);
-    LittleEndian::write_u32(&mut sb_bytes[24..28], superblock.bmapstart);
-
+    let mut sb_encoded = [0; Superblock::PACKED_LEN];
+    superblock.encode_as_le_bytes(&mut sb_encoded);
+    
     // Writes the buffer into disk
-    fs_img.write(&sb_bytes)?;
+    fs_img.write(&sb_encoded)?;
 
     Ok(())
 }

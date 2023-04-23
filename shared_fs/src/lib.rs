@@ -1,9 +1,11 @@
 #![no_std]
+use endian_codec::{PackedSize, EncodeLE, DecodeLE};
+
 pub const ROOTINO: u32 = 1;  // root i-number
 pub const BSIZE: u32 = 512;  // block size
 pub const NDIRECT: u32 = 12;
  
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, EncodeLE, DecodeLE, PackedSize)]
 pub struct Superblock {
     pub size: u32,          // Size of FS Image 
     pub nblocks: u32,       // Number of data blocks
