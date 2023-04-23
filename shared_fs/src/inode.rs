@@ -1,5 +1,5 @@
 use crate::NDIRECT;
-use core::mem;
+use core::{mem, fmt};
 use endian_codec::{PackedSize, EncodeLE, DecodeLE};
 
 #[derive(Debug, PartialEq, EncodeLE, DecodeLE, PackedSize)]
@@ -9,7 +9,7 @@ pub struct Inode {
     pub minor_dev: u8,                  // Minor device number
     pub num_links: u8,                  // Number of symbolic links associated with this file 
     pub size: u32,                      // Total number of bytes of content of a file
-    pub data_addreses: DataAddresses,   // Records the block numbers of the disk
+    pub data_addresses: DataAddresses,   // Records the block numbers of the disk
 }
 
 impl Inode {
@@ -20,7 +20,7 @@ impl Inode {
             minor_dev: 0,
             num_links: 1,
             size: 0,
-            data_addreses: DataAddresses([0; NDIRECT as usize + 1]),
+            data_addresses: DataAddresses([0; NDIRECT as usize + 1]),
         }
     }
 }
@@ -36,7 +36,7 @@ pub enum InodeType {
 
 // Wrapper for u32 array for serialization / deserialization purposes
 #[derive(Debug, PartialEq)]
-pub struct DataAddresses([u32; 13]);
+pub struct DataAddresses(pub [u32; 13]);
 
 impl PackedSize for DataAddresses {
    const PACKED_LEN: usize = 13 * 4; 
