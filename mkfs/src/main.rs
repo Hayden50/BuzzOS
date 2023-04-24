@@ -46,12 +46,95 @@ fn main() -> Result<()> {
     write_dirent(&mut fs_img, &dot_entry, root_inode.data_addresses.0[0], 0)?;
     write_dirent(&mut fs_img, &dotdot_entry, root_inode.data_addresses.0[0], 1)?;
 
-    // Add any additional files, directories, or user programs to the file system
-    // ...
+    // Adds additional user programs to the file system
+    // let path_start: &str = "../../";
+    // for i in 2..args.len() {
+    //     let file_path: &str = &args[i];
+    //     let full_path = path_start.to_owned() + file_path;
+    //     println!("Adding file: {}", full_path);
+    //     add_file_to_fs(&mut fs_img, &(full_path), &superblock)?;
+    // }
 
     fs_img.flush()?;
     println!("File system created successfully.");
     Ok(())
+}
+
+// TODO: THIS WILL ADD THE USER BINARIES TO THE OS (BUGGY SO COMMENTED OUT)
+// fn add_file_to_fs(fs_img: &mut File, file_path: &str, superblock: &Superblock) -> Result<()> {
+//     let path = Path::new(file_path);
+//     let file_name = path.file_name().unwrap().to_str().unwrap();
+//
+//     if file_name.len() > 15 as usize {
+//         return Err(std::io::Error::new(
+//             std::io::ErrorKind::InvalidInput,
+//             "File name is too long",
+//         ));
+//     }
+//
+//     let mut file = File::open(file_path)?;
+//
+//     // Allocate an inode for the new file
+//     let inum = ialloc(fs_img, superblock)?;
+//     let mut new_inode = Inode::new(InodeType::File);
+//
+//     // Allocate and write data blocks
+//     let mut buffer = vec![0; BSIZE as usize];
+//     let mut file_size = 0;
+//     let mut block_index = 0;
+//
+//     while let Ok(bytes_read) = file.read(&mut buffer) {
+//         if bytes_read == 0 {
+//             break;
+//         }
+//
+//         let data_block = balloc(fs_img, superblock)?;
+//         fs_img.seek(SeekFrom::Start((data_block * BSIZE) as u64))?;
+//         fs_img.write_all(&buffer[0..bytes_read])?;
+//
+//         new_inode.data_addresses.0[block_index] = data_block;
+//         file_size += bytes_read;
+//         block_index += 1;
+//     }
+//
+//     new_inode.size = file_size as u32;
+//     write_inode(fs_img, inum, &new_inode, superblock)?;
+//
+//     // Add directory entry in the root directory
+//     let root_inode = read_inode(fs_img, ROOT_INO, superblock)?;
+//     let mut dirent_added = false;
+//
+//     for i in 0..(root_inode.size as usize / std::mem::size_of::<Dirent>()) {
+//         let dirent = read_dirent(fs_img, root_inode.data_addresses.0[0], i)?;
+//         if dirent.inum == 0 {
+//             let new_dirent = Dirent::new(inum as u8, file_name);
+//             write_dirent(fs_img, &new_dirent, root_inode.data_addresses.0[0], i)?;
+//             dirent_added = true;
+//             break;
+//         }
+//     }
+//
+//     if !dirent_added {
+//         return Err(std::io::Error::new(
+//             std::io::ErrorKind::Other,
+//             "No space in root directory",
+//         ));
+//     }
+//
+//     Ok(())
+// }
+
+// Helper function to read directory entries from disk
+fn read_dirent(fs_img: &mut File, block: u32, index: usize) -> Result<Dirent> {
+    let dirent_start = block * BSIZE + (index * std::mem::size_of::<Dirent>()) as u32;
+    fs_img.seek(SeekFrom::Start(dirent_start as u64))?;
+
+    let mut dirent_encoded = [0; Dirent::PACKED_LEN];
+    fs_img.read_exact(&mut dirent_encoded)?;
+
+    let dirent = Dirent::decode_from_le_bytes(&dirent_encoded);
+
+    Ok(dirent)
 }
 
 // Clears file system by setting everything to 0
@@ -65,7 +148,7 @@ fn zero_fs(fs_img: &mut File) -> Result<()> {
 }
 
 // Writes the superblock in to the second block on the disk
-fn write_superblock(fs_img: &mut File, superblock: &Superblock) -> Result<()> {
+fn write_superblock(fs_img: &mut File, superblock: &Superblock) -> Result<()> { 
     // This moves the pointer to the beginning of the first block 
     fs_img.seek(SeekFrom::Start(0))?;
 

@@ -64,11 +64,12 @@ script = [
 ]
 
 [tasks.create_fs]
-dependencies = ["build_mkfs"]
+dependencies = ["build_mkfs", "build_user"]
 workspace = false
 script = [
     "cd build",
-    "./mkfs fs.img",
+    "./mkfs fs.img $USER_PROGRAMS",
+    # "./mkfs fs.img",
     "cd ..",
 ]
 
